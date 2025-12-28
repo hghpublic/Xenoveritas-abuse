@@ -4,3 +4,6 @@
 # Ignore various backup files
 *.bak
 *~
+
+# cmake
+build/
