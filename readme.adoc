@@ -1,0 +1,73 @@
+= Abuse
+:toc:
+:sectnums:
+ifndef::env-github[:icons: font]
+:note-caption: :paperclip:
+:important-caption: :exclamation:
+:warning-caption: :warning:
+
+== Abuse
+
+https://en.wikipedia.org/wiki/Abuse_(video_game)
+
+The `Abuse` configuration file is located(created) at `/home/vscode/.abuse/abuserc`. +
+`ASSETDIR` is set to `data` folder located next to the executable.
+
+Output of running `abuse` command::
+----
+abuse 0.9.1
+Abuse version 0.9.1
+Sound: Disabled (couldn't find the sfx directory data/sfx)
+Specs : main file set to abuse.spe
+Protocol Installed : UNIX generic TCPIP
+Lisp: 527 symbols defined, 99 system functions, 319 pre-compiled functions
+0 joysticks on system
+Joystick : not detected
+(load "abuse.lsp") [........................................]
+Engine : Registering base graphics
+Palette has changed, recalculating light table...
+white light [......................................  ]
+tints [..................................      ]
+Video : 2056x1114 16bpp (renderer: opengl)
+Thank you for playing Abuse!
+----
+
+== YouTube
+
+=== Abuse gameplay (PC Game, 1995)
+
+https://www.youtube.com/watch?v=dLYZTTfFHTY
+
+=== DOS Game: Abuse
+
+https://www.youtube.com/watch?v=l8cYYPpRboo
+
+
+== Stash
+
+=== Abuse
+
+http://abuse.zoy.org/
+
+=== videogamepreservation
+
+https://github.com/videogamepreservation/abuse
+
+=== RGB Classic Games
+
+https://www.classicdosgames.com/game/Abuse.html
+
+=== Abuse 2025
+
+https://github.com/apancik/Abuse_2025
+
+=== Abuse_1996
+
+https://github.com/antrad/Abuse_1996
+
+
+=== Free Abuse (fRaBs)
+
+https://github.com/IntinteDAO/fRaBs
+
+https://www.moddb.com/games/abuse/downloads/frabs-free-abuse-sdl-21
