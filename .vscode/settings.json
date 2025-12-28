@@ -1,0 +1,21 @@
+{
+    "cmake.generator": "Ninja",
+    "cmake.configureSettings": {
+        "CMAKE_TOOLCHAIN_FILE": "${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+    },
+    "cmake.environment": {
+        "LSAN_OPTIONS": "suppressions=${workspaceFolder}/abuse.asan.supp:print_suppressions=1",
+        "ASAN_OPTIONS": "log_path=${workspaceFolder}/dev/asan/logs/abuse.asan.log"
+    },
+    "files.insertFinalNewline": true,
+    "editor.detectIndentation": false,
+    "editor.rulers": [
+        80
+    ],
+    "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+        "cppcoreguidelines-avoid-magic-numbers"
+    ],
+    "C_Cpp.codeAnalysis.exclude": {
+        "**/build": true
+    }
+}
