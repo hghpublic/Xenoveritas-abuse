@@ -1,4 +1,6 @@
-add_library(imlib STATIC
+set(target imlib)
+add_library(${target} STATIC)
+target_sources(${target} PRIVATE
     filter.cpp filter.h
     image.cpp image.h
     transimage.cpp transimage.h
@@ -26,8 +28,6 @@ add_library(imlib STATIC
     timing.h jdir.h visobj.h
 )
 
-include_directories(${abuse_SOURCE_DIR}/src)
-add_definitions(-DNO_CHECK)
-#INCLUDES = -I$(srcdir) -I$(srcdir)/.. $(SDL2_CFLAGS)
-
-#CPPFLAGS = @CPPFLAGS@ -DNO_CHECK
+target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(${target} INTERFACE ${CMAKE_CURRENT_LIST_DIR})
+target_compile_definitions(${target} PRIVATE -DNO_CHECK)

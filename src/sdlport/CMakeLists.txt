@@ -1,6 +1,8 @@
-#DEFS = @DEFS@
 
-add_library(sdlport STATIC
+set(target sdlport)
+add_library(${target} STATIC)
+target_compile_definitions(${target} PRIVATE -DASSETDIR="data")
+target_sources(${target} PRIVATE
     video.cpp
     event.cpp
     sound.cpp sound.h
@@ -11,13 +13,17 @@ add_library(sdlport STATIC
     hmi.cpp hmi.h
     errorui.cpp errorui.h
 )
-#libsdlport_a_LIBADD =
-#
-include_directories(
-    ${abuse_SOURCE_DIR}/src
-    ${abuse_SOURCE_DIR}/src/imlib
+target_include_directories(${target} PRIVATE
+    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src/imlib
 )
 
-target_link_libraries(sdlport SDL2::SDL2 SDL2_mixer::SDL2_mixer)
-#
-#CPPFLAGS = @CPPFLAGS@ -DNO_CHECK -DASSETDIR=\"$(assetdir)\"
+target_link_libraries(${target} PRIVATE
+    $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+)
+target_link_libraries(${target} PRIVATE
+    $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,
+        SDL2_mixer::SDL2_mixer,
+        SDL2_mixer::SDL2_mixer-static>
+)
