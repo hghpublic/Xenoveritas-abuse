@@ -38,6 +38,9 @@
 #include "nfserver.h"
 #include "specache.h"
 
+#include "sdlport/setup.h"
+extern Settings settings;
+
 extern int past_startup;
 
 property_manager *prop;
@@ -294,42 +297,32 @@ void load_data(int argc, char **argv)
     backtiles=NULL;
     pal=NULL;
     color_table=NULL;
+    
+    char const *lang = settings.language.c_str();
+    
+    // Temporarily switch to permanent space for the language string
+    LSpace *sp = LSpace::Current;
+    LSpace::Current = &LSpace::Perm;
+    LSymbol *sym = LSymbol::FindOrCreate("current_language");
+    sym->SetValue(LString::Create(lang));
+    LSpace::Current = sp;
 
-# if 0
-    int should_save_sd_cache = 0;
-
-    char *cachepath;
-    cachepath = (char *)malloc( strlen( get_save_filename_prefix() ) + 12 + 1 );
-    sprintf( cachepath, "%ssd_cache.tmp", get_save_filename_prefix() );
-
-    bFILE *load = open_file( cachepath, "rb" );
-    if( !load->open_failure() )
+    // don't let them specify a startup file we are connect elsewhere
+    if (!net_start())
     {
-        sd_cache.load( load );
-    }
-    else
-    {
-        should_save_sd_cache = 1;
-    }
-    delete load;
-#endif
-
-  // don't let them specify a startup file we are connect elsewhere
-  if (!net_start())
-  {
-    for (int i=1; i<argc; i++)
-    {
-      if (!strcmp(argv[i],"-lsf"))
+      for (int i = 1; i < argc; i++)
       {
-    i++;
-    strcpy(lsf,argv[i]);
+        if (!strcmp(argv[i], "-lsf"))
+        {
+          i++;
+          strcpy(lsf, argv[i]);
+        }
+        if (!strcmp(argv[i], "-a"))
+        {
+          i++;
+          snprintf(lsf, sizeof(lsf), "addon/%s/%s.lsp", argv[i], argv[i]);
+        }
       }
-      if (!strcmp(argv[i],"-a"))
-      {
-    i++;
-    snprintf(lsf, sizeof(lsf), "addon/%s/%s.lsp", argv[i], argv[i]);
-      }
-    }
   }
   else if (!get_remote_lsf(net_server,lsf))
   {

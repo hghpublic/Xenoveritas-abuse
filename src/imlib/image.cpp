@@ -254,53 +254,74 @@ void image::PutImage(image *im, ivec2 pos, int transparent)
 
 void image::PutPart(image *im, ivec2 pos, ivec2 aa, ivec2 bb, int transparent)
 {
-    CHECK(aa < bb);
+  CHECK(aa < bb);
 
-    ivec2 caa, cbb;
-    GetClip(caa, cbb);
+  ivec2 caa, cbb;
+  GetClip(caa, cbb);
 
-    // see if the are to be put is outside of actual image, if so adjust
-    // to fit in the image
-    pos += Min(aa, ivec2(0));
-    aa += Min(aa, ivec2(0));
-    bb = Min(bb, im->m_size);
-    // return if it was adjusted so that nothing will be put
-    if (!(aa < bb))
-        return;
+  // If aa has negative coordinates, adjust both pos and aa
+  pos -= Min(aa, ivec2(0));
+  aa = Max(aa, ivec2(0));
 
-    // see if the image gets clipped off the screen
-    if (!(pos < cbb && pos + (bb - aa) > caa))
-        return;
+  // Ensure bb doesn't exceed source image bounds
+  bb = Min(bb, im->m_size);
 
-    aa += Max(caa - pos, ivec2(0));
-    pos += Max(caa - pos, ivec2(0));
-    bb = Min(bb, cbb - pos + aa);
-    if (!(aa < bb))
-        return;
+  // Early exit if invalid coordinates
+  if (!(aa < bb))
+    return;
 
-    ivec2 span = bb - aa;
+  // Check if image is completely outside clip region
+  if (!(pos < cbb && pos + (bb - aa) > caa))
+    return;
 
-    AddDirty(pos, pos + span);
+  // Adjust for screen clipping
+  if (pos.x < caa.x)
+  {
+    int dx = caa.x - pos.x;
+    aa.x += dx;
+    pos.x = caa.x;
+  }
+  if (pos.y < caa.y)
+  {
+    int dy = caa.y - pos.y;
+    aa.y += dy;
+    pos.y = caa.y;
+  }
 
-    Lock();
-    im->Lock();
+  // Clip right and bottom edges
+  bb = Min(bb, aa + (cbb - pos));
 
-    for (int j = 0; j < span.y; j++)
+  // Calculate actual span to copy
+  ivec2 span = bb - aa;
+
+  // Verify final bounds
+  if (span.x <= 0 || span.y <= 0 ||
+      pos.x + span.x > m_size.x || pos.y + span.y > m_size.y ||
+      aa.x + span.x > im->m_size.x || aa.y + span.y > im->m_size.y)
+    return;
+
+  AddDirty(pos, pos + span);
+
+  Lock();
+  im->Lock();
+
+  for (int j = 0; j < span.y; j++)
+  {
+    uint8_t *dst = scan_line(pos.y + j) + pos.x;
+    uint8_t *src = im->scan_line(aa.y + j) + aa.x;
+
+    if (transparent)
     {
-        uint8_t *dst = scan_line(pos.y + j) + pos.x;
-        uint8_t *src = im->scan_line(aa.y + j) + aa.x;
-        if (transparent)
-        {
-            for (int i = 0; i < span.x; i++, src++, dst++)
-                if (*src)
-                    *dst = *src;
-        }
-        else
-            memcpy(dst, src, span.x);
+      for (int i = 0; i < span.x; i++, src++, dst++)
+        if (*src)
+          *dst = *src;
     }
+    else
+      memcpy(dst, src, span.x);
+  }
 
-    im->Unlock();
-    Unlock();
+  im->Unlock();
+  Unlock();
 }
 
 void image::Rectangle(ivec2 p1, ivec2 p2, uint8_t color)

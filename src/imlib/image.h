@@ -103,6 +103,7 @@ private:
     void DeletePage();
 
 public:
+
     image_descriptor *m_special;
 
     image(bFILE *fp, spec_entry *e = NULL);
@@ -174,6 +175,11 @@ public:
     void unpack_scanline(int16_t line, char bitsperpixel = 1);
     void FlipX();
     void FlipY();
+
+	//AR need name and pixel data to save to .png file using OpenCV
+	std::string ar_name, ar_name_o;// removed .pcx, name in SPEC file
+	uint8_t		ar_type;
+	uint8_t*	AR_GetPixels()		{return this->m_data;}
 };
 
 class image_controller

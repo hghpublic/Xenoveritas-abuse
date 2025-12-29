@@ -44,6 +44,11 @@
 #define SHIFT_DOWN_DEFAULT 24
 #define SHIFT_RIGHT_DEFAULT 0
 
+//AR
+#include "sdlport/setup.h"
+extern Settings settings;
+//
+
 extern int get_key_binding( char const *dir, int i );
 view *player_list=NULL;
 int morph_sel_frame_color;
@@ -114,8 +119,8 @@ int view::weapon_total(int type)
     printf("weapon out of range\n");
     return 0;
   }
-  if (god) return 100;
-  else if (weapons[type]==-1) return 0;
+  
+  if (weapons[type]==-1) return 0;
   else return weapons[type];
 }
 
@@ -423,6 +428,7 @@ void view::get_input()
     base->packet.write_uint16((uint16_t)sug_p.y);
 }
 
+#include <string>
 
 void view::add_chat_key(int key)  // return string if buf is complete
 {
@@ -445,6 +451,78 @@ void view::add_chat_key(int key)  // return string if buf is complete
 
   if (len>38 || key==JK_ENTER)
   {
+	  //AR cheats - tmp console solution
+	  std::string chat_text = m_chat_buf;	 
+
+	  if(chat_text.empty() || chat_text=="exit" || chat_text=="quit")
+	  {
+		  chat->toggle();
+	  }	  
+	  else if(chat_text=="god")
+	  {
+		  settings.cheat_god = !settings.cheat_god;
+
+		  if(settings.cheat_god) chat_text += " ENABLED";
+		  else chat_text += " DISABLED";
+
+		  strcpy(m_chat_buf,chat_text.c_str());
+	  }
+	  else if(chat_text=="giveall")
+	  {
+		  chat_text += " DONE";
+
+		  for(int i=0;i<total_weapons-1;i++) weapons[i] = 999;
+		  sbar.redraw(main_screen);
+
+		  strcpy(m_chat_buf,chat_text.c_str());
+	  }
+	  else if(chat_text=="bullettime")
+	  {
+		  settings.cheat_bullettime = !settings.cheat_bullettime;
+
+		  if(settings.cheat_bullettime) chat_text += " ENABLED";
+		  else chat_text += " DISABLED";
+
+		  strcpy(m_chat_buf,chat_text.c_str());
+	  }
+	  //cop.cpp -> special_power=4
+	  else if(chat_text=="nopower")
+	  {
+		  this->m_focus->lvars[4] = 0;//NO_POWER
+
+		  chat_text += " ENABLED";
+		  strcpy(m_chat_buf,chat_text.c_str());
+	  }
+	  else if(chat_text=="fastpower")
+	  {
+		  this->m_focus->lvars[4] = 1;//FAST_POWER
+
+		  chat_text += " ENABLED";
+		  strcpy(m_chat_buf,chat_text.c_str());
+	  }
+	  else if(chat_text=="flypower")
+	  {
+		  this->m_focus->lvars[4] = 2;//FLY_POWER
+
+		  chat_text += " ENABLED";
+		  strcpy(m_chat_buf,chat_text.c_str());
+	  }
+	  else if(chat_text=="sneakypower")
+	  {
+		  this->m_focus->lvars[4] = 3;//SNEAKY_POWER
+
+		  chat_text += " ENABLED";
+		  strcpy(m_chat_buf,chat_text.c_str());
+	  }
+	  else if(chat_text=="healthpower")
+	  {
+		  this->m_focus->lvars[4] = 4;//HEALTH_POWER
+
+		  chat_text += " ENABLED";
+		  strcpy(m_chat_buf,chat_text.c_str());
+	  }
+	  //
+
     if (DEFINEDP(l_chat_input->GetFunction()))
     {
       game_object *o=current_object;
@@ -607,23 +685,7 @@ int view::handle_event(Event &ev)
 {
     if( ev.type == EV_KEY )
     {
-        if( ev.key == (int)',' )
-        {
-            if( total_weapons )
-            {
-                last_weapon();
-            }
-            return 1;
-        }
-        else if( ev.key == (int)'.' )
-        {
-            if( total_weapons )
-            {
-                next_weapon();
-            }
-            return 1;
-        }
-        else if( ev.key == get_key_binding( "b3", 0 ) )
+        if( ev.key == get_key_binding( "b3", 0 ) )
         {
             if( total_weapons )
             {
@@ -657,8 +719,7 @@ int view::handle_event(Event &ev)
                 }
             } break;
 
-            case JK_HOME:
-            case JK_CTRL_L:
+			//AR left hardcoded because of the help screen
             case JK_CTRL_R:
             {
                 if( total_weapons )
@@ -667,8 +728,8 @@ int view::handle_event(Event &ev)
                 }
                 return 1;
             } break;
-            case JK_PAGEUP:
-            case JK_INSERT:
+            
+			case JK_INSERT:
             {
                 if( total_weapons )
                 {
@@ -712,9 +773,9 @@ void recalc_local_view_space()   // calculates view areas for local players, sho
     int Xres=small_render ? xres/2 : xres;
     int Yres=small_render ? yres/2 : yres;
 
-    int h=Yres/t;
-    int w=h*320/200,y=5;
-    if (w<300) w=300;
+    int h = yres;
+    int w = xres;
+    int y = 0;
 
     for (view *f=player_list; f; f=f->next)
     {
@@ -722,7 +783,7 @@ void recalc_local_view_space()   // calculates view areas for local players, sho
       {
     f->suggest.cx1=Xres/2-w/2;
     f->suggest.cx2=Xres/2+w/2;
-    if (f->suggest.cx1<2) f->suggest.cx1=2;
+    if (f->suggest.cx1<2) f->suggest.cx1=0;
     if (f->suggest.cx2>Xres-2) f->suggest.cx2=Xres-2;
 
     f->suggest.cy1=y;
@@ -824,7 +885,7 @@ void view::set_input(int cx, int cy, int b1, int b2, int b3, int b4, int px, int
 
 
 void view::reset_player()
-{
+{ 
   if (m_focus)
   {
 
@@ -1027,7 +1088,12 @@ int32_t view::set_view_var_value(int num, int32_t x)
     case V_SHIFT_DOWN : m_shift.y = x; break;
     case V_SHIFT_RIGHT : m_shift.x = x; break;
     case V_GOD : god=x; break;
-    case V_PLAYER_NUMBER : { player_number=x; if (local_player()) sbar.associate(this); }  break;
+    case V_PLAYER_NUMBER : {      
+      player_number=x;
+      if (local_player()) sbar.associate(this);
+      set_tint(x);
+    }
+    break;
 
     case V_DRAW_SOLID : draw_solid=x; break;
     case V_CURRENT_WEAPON : { current_weapon=x; sbar.need_refresh(); } break;
@@ -1125,108 +1191,119 @@ void view::configure_for_area(area_controller *a)
   }
 }
 
-
 void process_packet_commands(uint8_t *pk, int size)
 {
-  int32_t sync_uint16=-1;
+  int32_t sync_uint16 = -1;
 
-  if (!size) return ;
-  pk[size]=SCMD_END_OF_PACKET;
+  if (!size)
+    return;
+    
+  pk[size] = SCMD_END_OF_PACKET;
 
   uint8_t cmd;
-  int already_reloaded=0;
-
+  int already_reloaded = 0;
 
   do
   {
-    cmd=*(pk++);
+    cmd = *(pk++);
     switch (cmd)
     {
-      case SCMD_WEAPON_CHANGE :
-      case SCMD_SET_INPUT :
-      case SCMD_VIEW_RESIZE :
-      case SCMD_KEYPRESS :
-      case SCMD_KEYRELEASE :
-      case SCMD_EXT_KEYPRESS :
-      case SCMD_EXT_KEYRELEASE :
-      case SCMD_CHAT_KEYPRESS :
-      {
-    uint8_t player_num=*(pk++);
+    case SCMD_WEAPON_CHANGE:
+    case SCMD_SET_INPUT:
+    case SCMD_VIEW_RESIZE:
+    case SCMD_KEYPRESS:
+    case SCMD_KEYRELEASE:
+    case SCMD_EXT_KEYPRESS:
+    case SCMD_EXT_KEYRELEASE:
+    case SCMD_CHAT_KEYPRESS:
+    {
+      uint8_t player_num = *(pk++);
 
-    view *v=player_list;
-    for (; v && v->player_number!=player_num; v=v->next);
-    if (v)
-    {
-      if (v->player_number==player_num)
-      v->process_input(cmd,pk);
-    }
-    else
-    {
-      dprintf("Evil error : bad player number in packet\n");
-      return ;
-    }
-      } break;
-      case SCMD_RELOAD :
+      view *v = player_list;
+      for (; v && v->player_number != player_num; v = v->next)
+        ;
+      if (v)
       {
-    if (!already_reloaded)
-    {
-      net_reload();
-      already_reloaded=1;
-    }
-      } break;
-
-      case SCMD_SYNC :
-      {
-    uint16_t x;
-    memcpy(&x,pk,2);  pk+=2;
-    x=lstl(x);
-    if (demo_man.current_state()==demo_manager::PLAYING)
-    sync_uint16=make_sync();
-
-    if (sync_uint16==-1)
-    sync_uint16=x;
-    else if (x!=sync_uint16 && !already_reloaded)
-    {
-      dprintf("out of sync %d (packet=%d, calced=%d)\n",current_level->tick_counter(),x,sync_uint16);
-      if (demo_man.current_state()==demo_manager::NORMAL)
-        net_reload();
-      already_reloaded=1;
-    }
-      } break;
-      case SCMD_DELETE_CLIENT :
-      {
-    uint8_t player_num=*(pk++);
-    view *v=player_list,*last=NULL;
-    for (; v && v->player_number!=player_num; v=v->next)
-    last=v;
-    if (!v)
-    dprintf("evil : delete client %d, but no such client\n");
-    else
-    {
-
-      // make a list of all objects associated with this player
-      object_node *on=make_player_onodes(player_num);
-      while (on)
-      {
-        current_level->delete_object(on->me);
-        object_node *last=on;
-        on=on->next;
-        delete last;
+        if (v->player_number == player_num)
+          v->process_input(cmd, pk);
       }
-
-      v->m_focus=NULL;
-      if (last)
-      last->next=v->next;
-      else player_list=player_list->next;
-
-      delete v;
+      else
+      {
+        dprintf("Evil error : bad player number in packet\n");
+        return;
+      }
     }
-      } break;
-      default :
-      dprintf("Unknown net command %d\n",cmd);
-
+    break;
+    case SCMD_RELOAD:
+    {
+      if (!already_reloaded)
+      {
+        net_reload();
+        already_reloaded = 1;
+      }
     }
-  } while (cmd!=SCMD_END_OF_PACKET);
+    break;
+
+    case SCMD_SYNC:
+    {
+      uint16_t x;
+      memcpy(&x, pk, 2);
+      pk += 2;
+      x = lstl(x);
+      if (demo_man.current_state() == demo_manager::PLAYING)
+        sync_uint16 = make_sync();
+
+      if (sync_uint16 == -1)
+        sync_uint16 = x;
+      else if (x != sync_uint16 && !already_reloaded)
+      {
+        dprintf("out of sync %d (packet=%d, calced=%d)\n", current_level->tick_counter(), x, sync_uint16);
+        if (demo_man.current_state() == demo_manager::NORMAL)
+          net_reload();
+        already_reloaded = 1;
+      }
+    }
+    break;
+    
+    case SCMD_DELETE_CLIENT:
+    {
+      uint8_t player_num = *(pk++);
+      view *v = player_list, *last = NULL;
+      for (; v && v->player_number != player_num; v = v->next)
+        last = v;
+      if (!v)
+        dprintf("evil : delete client %d, but no such client\n");
+      else
+      {
+
+        // make a list of all objects associated with this player
+        object_node *on = make_player_onodes(player_num);
+        while (on)
+        {
+          current_level->delete_object(on->me);
+          object_node *last = on;
+          on = on->next;
+          delete last;
+        }
+
+        v->m_focus = NULL;
+        if (last)
+          last->next = v->next;
+        else
+          player_list = player_list->next;
+
+        delete v;
+      }
+    }
+    break;
+    
+    case SCMD_END_OF_PACKET:
+      break;
+      
+    default:
+      dprintf("Unknown net command %d\n", cmd);
+    }
+  } while (cmd != SCMD_END_OF_PACKET);
 }
 
 void view::set_tint(int tint)

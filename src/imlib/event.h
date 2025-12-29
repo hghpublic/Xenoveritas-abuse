@@ -41,11 +41,29 @@ public:
     Event()
     {
         type = EV_SPURIOUS;
+        mouse_move = ivec2(0, 0);
+        mouse_button = 0;
+        key = 0;
+        key_special.alt = 0;
+        key_special.ctrl = 0;
+        key_special.shift = 0;
+        window = NULL;
+        window_position = ivec2(0, 0);
+        message.id = 0;
+        message.data = NULL;
     }
 
     Event(int id, char *data)
     {
         type = EV_MESSAGE;
+        mouse_move = ivec2(0, 0);
+        mouse_button = 0;
+        key = 0;
+        key_special.alt = 0;
+        key_special.ctrl = 0;
+        key_special.shift = 0;
+        window = NULL;
+        window_position = ivec2(0, 0);
         message.id = id;
         message.data = data;
     }
@@ -92,6 +110,11 @@ public:
                       Min(Max(pos.y, 0), m_screen->Size().y - 1));
         SysWarpMouse(m_pos);
     }
+	//AR
+	ivec2 GetMousePos()
+    {
+         return this->m_pos;
+    }
     void SetIgnoreWheelEvents(bool ignore)
     {
         m_ignore_wheel_events = ignore;
@@ -113,14 +136,14 @@ private:
     // "Dead zone" before motion of a stick "counts".
     // Maximum stick values are 0x7FFF, currently I've
     // arbitrarily set this to 1/4th.
-    int m_dead_zone = 0x2000;
+    int m_dead_zone;//AR (int m_dead_zone = 0x2000;)
     // Scale amount for the right stick when moving the mouse. The range is
     // -0x7FFF to 0x7FFF, or -32767 to 32767. The default means it will move
     // a maximum of 3 pixels per tick.
-    int m_right_stick_scale = 0x2000;
+    int m_right_stick_scale;//AR (int m_right_stick_scale = 0x2000;)
     // Scale amount for the right stick when it's player-locked.
     // 0x400 gives a range of -31 to 31.
-    int m_right_stick_player_scale = 0x400;
+    int m_right_stick_player_scale;//AR (int m_right_stick_player_scale = 0x400;)
     int m_right_stick_x, m_right_stick_y;
 
     image *m_screen;

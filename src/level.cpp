@@ -12,10 +12,6 @@
 #   include "config.h"
 #endif
 
-#if (defined(__MACH__) || !defined(__APPLE__))
-#include <sys/stat.h>
-#endif
-
 #include <string.h>
 #include <limits.h>
 #include <time.h>
@@ -1365,6 +1361,7 @@ level::level(spec_directory *sd, bFILE *fp, char const *lev_name)
   int32_t i,w;
   uint16_t *m;
   spec_entry *load_all=sd->find("player_info");
+
   for (i=0,w=fg_width*fg_height,m=map_fg; i<w; i++,m++)
   {
     if (!load_all)
@@ -1391,12 +1388,9 @@ level::level(spec_directory *sd, bFILE *fp, char const *lev_name)
   players=make_player_onodes();
   objs=make_not_list(players);
 
-
-
   read_lights(sd,fp,lev_name);
   load_links(fp,sd,objs,players);
   int players_got_loaded=load_player_info(fp,sd,objs);
-
 
   game_object *l=first;
   for (; l; )
@@ -1473,44 +1467,68 @@ void get_prof_assoc_filename(char *filename, char *prof_filename)
   *s2=0;
 }
 
+#include <sstream>
+
 void level::level_loaded_notify()
 {
-  char *n;
-  if (first_name)
-    n=first_name;
-  else
-    n=name();
-  if (strstr(n,"levels/level"))
-  {
-    char nm[100];
-    sprintf(nm,"music/abuse%c%c.hmi",n[12],n[13]);
-    bFILE *fp=open_file(nm,"rb");
-    if (fp->open_failure())
-    {
-      delete fp;
-    }
-    else
-    {
-      if (current_song) { current_song->stop(); delete current_song; }
+	char *n;
 
-      delete fp;
-      current_song=new song(nm);
-      current_song->play(music_volume);
-    }
-  }
+	if(first_name) n = first_name;
+	else n = name();
 
-/*  if (DEFINEDP(symbol_function(l_level_loaded)))
-  {
-    LSpace *sp = LSpace::Current;
-    LSpace::Current = &LSpace::Perm;
+	//AR level music matches level number -> level[01].spe
+	std::string path = n;
+	if(path.size()<6) return;
 
-    void *arg_list=NULL;
-    PtrRef r1(arg_list);
-    push_onto_list(LString::Create(n),arg_list);
-    ((LSymbol *)l_level_loaded)->EvalFunction(arg_list);
+	//find the music file, if level has no music load music from some previous level (lower number)
+	std::stringstream stream;
+	stream << path[path.size()-6] << path[path.size()-5];
+	int i;
+	stream >> i;
+	
+	while(i>=0)
+	{
+		char nm[100];
 
-    LSpace::Current = sp;
-  } */
+		if(i<10) sprintf(nm,"music/abuse%c%d.hmi",'0',i);
+		else sprintf(nm,"music/abuse%d.hmi",i);
+
+		bFILE *fp = open_file(nm,"rb");
+		if(fp->open_failure())
+		{
+			//music file not found
+			delete fp;
+			i--;
+		}
+		else
+		{
+			//music file found
+			if(current_song)
+			{
+				current_song->stop();
+				delete current_song;
+			}
+
+			delete fp;
+			current_song = new song(nm);
+			current_song->play(music_volume);
+
+			return;
+		}
+	}
+	
+	/*if (DEFINEDP(symbol_function(l_level_loaded)))
+	{
+	LSpace *sp = LSpace::Current;
+	LSpace::Current = &LSpace::Perm;
+
+	void *arg_list=NULL;
+	PtrRef r1(arg_list);
+	push_onto_list(LString::Create(n),arg_list);
+	((LSymbol *)l_level_loaded)->EvalFunction(arg_list);
+
+	LSpace::Current = sp;
+	}*/
 }
 
 
@@ -1636,18 +1654,18 @@ void scale_put(image *im, image *screen, int x, int y, short new_width, short ne
 
 void level::write_thumb_nail(bFILE *fp, image *im)
 {
-  image *i = new image(ivec2(160, 100 + wm->font()->Size().y * 2));
+  image *i = new image(ivec2(160, 100 + the_game->save_game_font->Size().y * 2));
   i->clear();
   scale_put(im,i,0,0,160,100);
   if (first_name)
-    wm->font()->PutString(i, ivec2(80 - strlen(first_name) * wm->font()->Size().x / 2, 100), first_name);
+    the_game->save_game_font->PutString(i, ivec2(80 - strlen(first_name) * the_game->save_game_font->Size().x / 2, 100), first_name);
 
   time_t t;
   t=time(NULL);
   char buf[80];
 
   strftime(buf,80,"%H:%M:%S %A %B %d",localtime(&t));
-  wm->font()->PutString(i, ivec2(80, 100) + ivec2(-strlen(buf), 2) * wm->font()->Size() / ivec2(2),buf);
+  the_game->save_game_font->PutString(i, ivec2(80, 100) + ivec2(-strlen(buf), 2) * the_game->save_game_font->Size() / ivec2(2),buf);
 
   fp->write_uint16(i->Size().x);
   fp->write_uint16(i->Size().y);
@@ -2195,20 +2213,22 @@ void level::load_cache_info(spec_directory *sd, bFILE *fp)
 
 int level::save(char const *filename, int save_all)
 {
-    char name[255], bkname[255];
+	//AR clisp.case 223 saves the game in game
 
-    sprintf( name, "%s%s", get_save_filename_prefix(), filename );
-    sprintf( bkname, "%slevsave.bak", get_save_filename_prefix() );
+    char name[255]; //, bkname[255];
+
+    sprintf( name, "%s", filename );
+    // sprintf( bkname, "%slevsave.bak", get_save_filename_prefix() );
     if( !save_all && DEFINEDP( symbol_value( l_keep_backup ) ) &&
         symbol_value( l_keep_backup ) )   // make a backup
     {
         bFILE *fp = open_file( name, "rb" );    // does file already exist?
         if( !fp->open_failure() )
         {
-            unlink( bkname );
-            bFILE *bk = open_file( bkname, "wb" );
+            // unlink( bkname );
+            bFILE *bk = open_file("levsave.bak", "wb");
             if( bk->open_failure() )
-                dprintf("unable to open backup file %s\n", bkname );
+              dprintf("unable to open backup file levsave.bak\n");
             else
             {
                 uint8_t buf[0x1000];
@@ -2223,9 +2243,6 @@ int level::save(char const *filename, int save_all)
                 }
             }
             delete bk;
-#if (defined(__MACH__) || !defined(__APPLE__)) && (!defined(WIN32))
-            chmod( bkname, S_IRWXU | S_IRWXG | S_IRWXO );
-#endif
         }
         delete fp;
     }
@@ -2334,7 +2351,7 @@ int level::save(char const *filename, int save_all)
     {
         the_game->show_help( "Unable to open file for saving.\n" );
         printf( "\nFailed to save game.\n" );
-        printf( "I was trying to save to: '%s'\n\tPath: '%s'\n\tFile: '%s'\n", name, get_save_filename_prefix(), filename );
+        printf( "I was trying to save to file: '%s'\n", filename );
         printf( "\nPlease send an email to:\n\ttrandor@labyrinth.net.au\nwith these details.\nThanks.\n" );
         return 0;
     }
@@ -3243,7 +3260,7 @@ object_node *level::make_not_list(object_node *list)
 
 void level::write_object_info(char *filename)
 {
-  FILE *fp=open_FILE(filename,"wb");
+  FILE *fp = prefix_fopen(filename, "wb");
   if (fp)
   {
     int i=0;

@@ -36,9 +36,10 @@
 #include "timing.h"
 
 #ifdef __APPLE__
-// OSX 10.1 has nanosleep but no header for it!
+// OSX 10.1 has nanosleep and gettimeofday but no headers for them!
 extern "C" {
 int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+int gettimeofday(struct timeval *tv, void *tz);
 }
 #endif
 

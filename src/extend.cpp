@@ -94,15 +94,25 @@ void simple_object::remove_light(light_source *ls)
 
 void simple_object::remove_object(game_object *o)
 {
-  for (int i=0; i<tobjs; i++)
+  for (int i = 0; i < tobjs; i++)
   {
-    if (objs[i]==o)
+    if (objs[i] == o)
     {
       tobjs--;
-      for (int j=i; j<tobjs; j++)     // don't even think about it :)
-        objs[j]=objs[j+1];
-      objs=(game_object **)realloc(objs,sizeof(game_object *)*tobjs);
-      return ;
+      for (int j = i; j < tobjs; j++) // don't even think about it :)
+        objs[j] = objs[j + 1];
+        
+      if (tobjs)
+      {
+        objs = (game_object **)realloc(objs, sizeof(game_object *) * tobjs);
+      }
+      else
+      {
+        free(objs);
+        objs = NULL;
+      }
+      
+      return;
     }
   }
 }

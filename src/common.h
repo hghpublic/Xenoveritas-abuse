@@ -14,8 +14,10 @@
 //
 // Globally required headers
 //
-#include <stdint.h>
 #include <stdio.h>
+#include <cstdint>
+
+#include "file_utils.h"
 
 #ifdef _MSC_VER
 // For simplicity sake, just make snprintf sprintf_s even though they aren't quite the same
@@ -101,6 +103,23 @@ static inline uint32_t lltl(uint32_t x)
 #else
 #   define CONDITION(x,st) ERROR(x,st)
 #   define CHECK(x) CONDITION(x,"Check stop");
+#endif
+
+#ifndef __DEBUG_LOG_HPP_
+#define __DEBUG_LOG_HPP_
+
+#include <stdio.h>
+#include <time.h>
+
+#ifdef WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#else
+#include <sys/time.h>
+#endif
+
 #endif
 
 #endif // __COMMON_H__

@@ -2,6 +2,7 @@
  *  Abuse - dark 2D side-scrolling platform game
  *  Copyright (c) 1995 Crack dot Com
  *  Copyright (c) 2005-2011 Sam Hocevar <sam@hocevar.net>
+ *  Copyright (c) 2016 Antonio Radojkovic <antonior.software@gmail.com>
  *
  *  This software was released into the Public Domain. As with most public
  *  domain software, no warranty is made or implied by Crack dot Com, by
@@ -37,6 +38,12 @@
 #include "sbar.h"
 #include "compiled.h"
 #include "chat.h"
+
+//AR
+#include "sdlport/setup.h"
+extern Settings settings;
+extern int get_key_binding( char const *dir, int i );
+//
 
 #define make_above_tile(x) ((x)|0x4000)
 char backw_on=0,forew_on=0,show_menu_on=0,ledit_on=0,pmenu_on=0,omenu_on=0,commandw_on=0,tbw_on=0,
@@ -160,21 +167,47 @@ class amb_cont : public scroller
 
 int confirm_quit()
 {
+	//AR let me know we are stuck here
+	the_game->ar_stateold = the_game->ar_state;
+	the_game->ar_state = AR_QUIT;
+
+	//AR controller ui movement, button size 32x25
+	static int button_w = 32;
+	static int button_h = 25;
+	int mx, my;//mouse position
+	int border_left, border_right;
+
+	int old_mx = wm->GetMousePos().x;
+	int old_my = wm->GetMousePos().y;	
+
     Jwindow *quitw;
     image *ok_image, *cancel_image;
 
-    ok_image = cache.img(cache.reg("art/frame.spe", "dev_ok",
-                                 SPEC_IMAGE, 1))->copy();
-    cancel_image = cache.img(cache.reg("art/frame.spe", "cancel",
-                                     SPEC_IMAGE, 1))->copy();
+	//AR no highres images for these buttons
+	float hr = 1;
+	if(settings.big_font) hr = (float)the_game->ar_big_font->Size().x/the_game->ar_small_font->Size().x;
 
-    quitw = wm->CreateWindow(ivec2(xres / 2 + 40, yres / 2), ivec2(80, -1),
-              new button(10, wm->font()->Size().y + 4, ID_QUIT_OK, ok_image,
-              new button(38, wm->font()->Size().y + 4, ID_CANCEL, cancel_image,
+    ok_image = cache.img(cache.reg("art/frame.spe", "dev_ok", SPEC_IMAGE, 1))->copy();
+    cancel_image = cache.img(cache.reg("art/frame.spe", "cancel", SPEC_IMAGE, 1))->copy();
+
+    quitw = wm->CreateWindow(ivec2(xres/2 - hr*68/2, yres/2 - hr*40/2), ivec2(hr*68, -1),
+              new button(hr*68/2 - 32, wm->font()->Size().y + 4, ID_QUIT_OK, ok_image,
+              new button(hr*68/2 + 4, wm->font()->Size().y + 4, ID_CANCEL, cancel_image,
               new info_field(2, 2, ID_NULL, symbol_str("sure?"), NULL))),
               symbol_str("quit_title"));
 
     wm->grab_focus(quitw);
+
+	//AR initial position of the mouse in the window for controller use
+	if(settings.ctr_aim)
+	{
+		mx = quitw->m_pos.x + (hr*68/2-32) + button_w/2;
+		my = quitw->m_pos.y + wm->font()->Size().y*2 + button_h/2;
+		wm->SetMousePos(ivec2(mx,my));
+		border_left = mx;
+		border_right = mx + button_w;
+	}
+
     int fin = 0, quit = 0;
 
     while(!fin)
@@ -196,6 +229,21 @@ int confirm_quit()
         if((ev.type == EV_KEY && ev.key == JK_ESC)
            || ev.type == EV_CLOSE_WINDOW)
             fin = 1;
+
+		//AR move cursor over icons
+		if(settings.ctr_aim && ev.type==EV_KEY)
+		{
+			if((ev.key==get_key_binding("left",0) || ev.key==get_key_binding("left2",0)))
+			{
+				if(mx-button_w>=border_left) mx -= button_w;
+				wm->SetMousePos(ivec2(mx,my));
+			}
+			if((ev.key==get_key_binding("right",0) || ev.key==get_key_binding("right2",0)))
+			{
+				if(mx+button_w<=border_right) mx += button_w;
+				wm->SetMousePos(ivec2(mx,my));
+			}
+		}
     }
 
     delete ok_image;
@@ -205,6 +253,11 @@ int confirm_quit()
 
     wm->close_window(quitw);
     wm->flush_screen();
+
+	//AR let me know we leaving
+	the_game->ar_state = the_game->ar_stateold;
+	if(settings.ctr_aim) wm->SetMousePos(ivec2(old_mx,old_my));//put mouse where it was on entering
+
     return quit;
 }
 
@@ -812,7 +865,7 @@ void dev_controll::toggle_search_window()
     searchw_on = 0;
 }
 
-int open_owin=0,open_fwin=0,open_bwin=0,start_edit=0,start_nodelay=0,start_doubled=0,start_mem=0;
+int open_owin=0,open_fwin=0,open_bwin=0,start_edit=0,start_nodelay=0,start_doubled=0;
 
 
 int get_option(char const *name);
@@ -825,6 +878,10 @@ void dev_init(int argc, char **argv)
   dev=0;
   int i;
   prop=new property_manager;
+
+  // std::string path_fin = get_save_filename_prefix();
+  // path_fin += ;
+
   prop->load("defaults.prp");
 
   for (i=1; i<argc; i++)
@@ -835,16 +892,14 @@ void dev_init(int argc, char **argv)
       start_edit=1;
       start_running=1;
       disable_autolight=1;
-      if (get_option("-2"))
-      {
-        printf("%s\n",symbol_str("no2"));
-        exit(0);
-      }
+      // if (get_option("-2"))
+      // {
+      //   printf("%s\n",symbol_str("no2"));
+      //   exit(0);
+      // }
     }
     else if (!strcmp(argv[i],"-fwin"))
-      open_fwin=1;
-    else if (!strcmp(argv[i],"-show_mem"))
-      start_mem=1;
+      open_fwin=1;    
     else if (!strcmp(argv[i],"-bwin"))
       open_bwin=1;
     else if (!strcmp(argv[i],"-owin"))
@@ -873,7 +928,7 @@ void dev_init(int argc, char **argv)
   if (get_option("-no_autolight"))
     disable_autolight=0;
 
-  if ((get_option("-size") || get_option("-vmode")) && !start_edit)
+  if ((get_option("-size")) && !start_edit)
   {
     printf("%s\n",symbol_str("no_hirez"));
     exit(0);
@@ -886,6 +941,33 @@ void dev_init(int argc, char **argv)
   fps_on=prop->getd("fps_on",0);
   show_names=prop->getd("show_names",0);
   raise_all=prop->getd("raise_all",0);
+}
+
+void AR_dev_init()
+{
+	//TODO...enbale command line options via config
+	scale_mult=1;
+	scale_div=1;
+	dev=0;
+	prop=new property_manager;
+	
+	// std::string path_fin = get_save_filename_prefix();
+	// path_fin += "defaults.prp";
+
+  prop->load("defaults.prp");
+
+  dev|=EDIT_MODE;
+	start_edit=1;
+	start_running=1;
+	disable_autolight=1;
+
+	fg_reversed=prop->getd("fg_reversed",0);
+	mouse_scrolling=prop->getd("mouse_scrolling",0);
+	palettes_locked=prop->getd("palettes_locked",0);
+	view_shift_disabled=prop->getd("view_shift_disabled",0);
+	fps_on=prop->getd("fps_on",0);
+	show_names=prop->getd("show_names",0);
+	raise_all=prop->getd("raise_all",0);
 }
 
 static pmenu *make_menu(int x, int y);
@@ -971,7 +1053,7 @@ void dev_controll::load_stuff()
 
 void dev_controll::do_command(char const *command, Event &ev)
 {
-  char fword[50];
+  char fword[150];
   char const *st;
   int l,h,x,y,i;
   if (command[0]=='(')            // is this a lisp command?
@@ -2304,7 +2386,14 @@ void dev_controll::handle_event(Event &ev)
     case ID_GOD_MODE :
     {
       for (view *v=player_list; v; v=v->next)
-        v->god=!v->god;
+	  {
+		  v->god=!v->god;
+		  if(v->god)
+		  {
+			  for(int i=0;i<total_weapons-1;i++) v->weapons[i] = 999;
+			  sbar.redraw(main_screen);
+		  }
+	  }
     } break;
     case ID_MOUSE_SCROLL :
     {
@@ -2842,7 +2931,11 @@ void dev_controll::handle_event(Event &ev)
         if (v)
         {
           v->god=!v->god;
-          sbar.redraw(main_screen);
+          if(v->god)
+		  {
+			  for(int i=0;i<total_weapons-1;i++) v->weapons[i] = 999;
+			  sbar.redraw(main_screen);
+		  }
         }
       } break;
       case ' ' :
@@ -3163,7 +3256,7 @@ void pal_win::save(FILE *fp)
 
 void dev_controll::save()
 {
-  FILE *fp=open_FILE("edit.lsp","w");
+  FILE *fp = prefix_fopen("edit.lsp", "w");
   if (!fp)
     the_game->show_help(symbol_str("no_edit.lsp"));
   else
@@ -3370,16 +3463,24 @@ void dev_controll::show_mem()
 
 void dev_cleanup()
 {
-  if (start_edit)
-    prop->save("defaults.prp");
-  delete prop;
-  if (listable_objs)
-  {
-    free(listable_objs);
-    listable_objs=NULL;
-  }
-  crc_manager.clean_up();
+	if (start_edit)
+	{
+		// std::string path_fin = get_save_filename_prefix();
+		// path_fin += "defaults.prp";
 
+		// prop->load(path_fin.c_str());
+    prop->load("defaults.prp");
+	}
+
+	delete prop;
+
+	if (listable_objs)
+	{
+		free(listable_objs);
+		listable_objs=NULL;
+	}
+
+	crc_manager.clean_up();
 }
 
 

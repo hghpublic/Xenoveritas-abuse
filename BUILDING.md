@@ -9,6 +9,7 @@
 - [CMake 3.16 or later](http://www.cmake.org/)
 - (Optional) [vcpgk](https://vcpkg.io/en/index.html) (for automating install of SDL2/SDL2_mixer dependencies, should work on all supported platforms)
 - GL libraries and headers are required for OpenGL support.
+- OpenCV library for extracting PCX images in SPEC files using abuse-tool
 
 #### Directory Structure
 
@@ -24,6 +25,16 @@ It's best to have a root directory within which this source code exists, along w
 - [Visual Studio 2019](https://visualstudio.microsoft.com/vs/)
 - CMake 3.16 or later
 - [WiX toolset](https://wixtoolset.org/) Optional, required to create an installer
+
+Building in Windows via the command line involves using the Visual Studio developer environment. Visual Studio should have installed a shortcut named "Developer Command Prompt for VS 2019" (or whatever version used - the latest is recommended) - this runs a CMD file that sets the necessary environment variables to use the Visual Studio command line tools. Commands need to be run within this environment for CMake to locate Visual Studio and for the development tools to be available.
+
+CMake and WiX can both be installed individually or via the [Chocolatey package manager](https://chocolatey.org/). Via Chocolatey, the command to install CMake and the WiX toolset is simply:
+
+    choco install cmake wixtoolset
+
+For Windows, the easiest way to get SDL2 and SDL2_mixer installed is via [vcpkg](https://vcpkg.io/en/index.html). Follow the [getting started instructions](https://vcpkg.io/en/getting-started.html). With it installed there should be nothing else to do, the `vcpkg.json` file indicates the required SDL2 and SDL2-mixer dependencies.
+
+With that set up, the CMake generation should succeed without any error.
 
 Building in Windows via the command line involves using the Visual Studio developer environment. Visual Studio should have installed a shortcut named "Developer Command Prompt for VS 2019" (or whatever version used - the latest is recommended) - this runs a CMD file that sets the necessary environment variables to use the Visual Studio command line tools. Commands need to be run within this environment for CMake to locate Visual Studio and for the development tools to be available.
 
@@ -59,6 +70,7 @@ By default, CMake on macOS uses the Makefile generator. To use the Xcode generat
    In order to get a build that includes all the data, you'll want to specify
    an install directory. All told, you might setup doing something like:
 
+
     ```sh
     mkdir abuse
     cd abuse
@@ -67,6 +79,13 @@ By default, CMake on macOS uses the Makefile generator. To use the Xcode generat
     cd build
     cmake -DCMAKE_INSTALL_PREFIX:PATH=../install ../abuse
     ```
+   On Windows, the CMake command is likely to require a few extra options, such as pointing to vcpkg, and make end up looking more like:
+
+       cmake -DCMAKE_TOOLCHAIN_FILE=%VCPKG_PATH%\scripts\buildsystems\vcpkg.cmake -DCMAKE_INSTALL_PREFIX:PATH=../install ../abuse
+
+   Note that `%VCPKG_PATH%` should be where vcpkg is installed. (Either set the variable or replace it in the command line.)
+
+3. Build the files
 
    On macOS, you may wish to use the Xcode generator:
 
@@ -80,7 +99,11 @@ By default, CMake on macOS uses the Makefile generator. To use the Xcode generat
     cmake -DCMAKE_TOOLCHAIN_FILE=%VCPKG_PATH%\scripts\buildsystems\vcpkg.cmake -DCMAKE_INSTALL_PREFIX:PATH=../install ../abuse
     ```
 
+
    Note that `%VCPKG_PATH%` should be where vcpkg is installed. (Either set the variable or replace it in the command line.)
+
+   Under Windows, you'll want to use `MSBuild abuse.sln`. (Alternatively, open
+   the solution in Visual Studio and build it that way.) You can also just run `MSBuild ALL_BUILD.vcxproj` as `ALL_BUILD.vcxproj` is the default build target.
 
 3. Build the files:
 

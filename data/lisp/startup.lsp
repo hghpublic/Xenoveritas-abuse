@@ -5,10 +5,10 @@
 
 (setq load_warn nil)
 
-(if (local_load "config/username.lsp")
+(if (local_load "addon/deathmat/username.lsp")  
   (set_login username))
 
-(if (local_load "config/gamename.lsp")
+(if (local_load "addon/deathmat/gamename.lsp")  
   (set_game_name gamename)
   (set_game_name "Abuse Net Game"))
 
@@ -24,8 +24,8 @@
 
 (setf sfx_directory     "sfx/")
 
-;(load_big_font     "art/letters.spe" "letters")
-(load_big_font     "art/fonts.spe" "screen11")
+(load_big_font     "art/letters.spe" "letters")
+;(load_big_font     "art/fonts.spe" "screen11")
 (load_small_font   "art/fonts.spe" "small_font")
 (load_console_font "art/fonts.spe" "fnt5x7")
 (load_color_filter "art/back/backgrnd.spe")

@@ -46,6 +46,7 @@
 (setf fly_image (def_image "art/misc.spe" "fly_image"))
 (setf sneaky_image (def_image "art/misc.spe" "sneaky_image"))
 (setf health_image (def_image "art/misc.spe" "b_check_image"))
+(setf shlamp_image (def_image "addon/aliens/aliens.spe" "slmp_img"))
 
 
 
@@ -364,7 +365,7 @@
 
 					     ;; save the level we are so joining clients know which one to load
 					     (if (not (am_a_client))
-						 (open_file "config/cur_lev.lsp" "wb"
+						 (open_file "addon/deathmat/cur_lev.lsp" "wb"
 							    (print `(setq current_net_level ,current_net_level))))
 
 					     (request_level_load (nth current_net_level net_levels))))

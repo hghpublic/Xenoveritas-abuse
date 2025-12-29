@@ -24,7 +24,7 @@ void JCFont::PutString(image *screen, ivec2 pos, char const *st, int color)
         PutChar(screen, pos, *st, color);
 }
 
-void JCFont::PutChar(image *screen, ivec2 pos, char ch, int color)
+void JCFont::PutChar(image *screen, ivec2 pos, unsigned char ch, int color)
 {
     if (!m_data[(int)ch])
         return;

@@ -1,3 +1,76 @@
+# News for Abuse 2025
+
+Multiplayer
+- player tints
+- reenable networking GUI
+- name saving/loading
+
+Rendering
+- sharp scaling
+- high DPI screens support
+- widescreen support
+- window resizing
+- remove border from rendering
+
+Others
+- file handling refactor
+- MIDI soundfonts
+- compiles on Mac and Ubuntu
+- new macos icon
+- enable translations through config
+
+# News for Abuse 0.9a (2016)
+
+- AntonioR's fork of the Xenoveritas SDL2 version
+
+ABUSE:
+- enabled custom screen size and resolution
+	- light enabled at high resolutions
+- local config file
+	- screen width, height, scale, borderless window, grab input
+	- editor mode
+	- controller aiming, right stick sensitivity, dead zone and crosshair distance from the player
+	- physics update time in ms
+- unlocked framerate for rendering, physics locked at custom value
+- re-enabled OpenGL rendering, enabled vsync
+- fullscreen scaling and "fit screen" scaling using F11 and F12
+- merged flags_struct and keys_struct into one settings class
+- Xbox controller support:
+	- fixed aiming using the right stick
+	- fixed player movement using left stick and dpad
+	- calculating and updating the crosshair position when aiming with a controller
+	- rebindable controller buttons, saving and loading of button bindings via config file
+	- navigating the main menu and save/load screens using dpad or left stick
+	- toggle controller use using F8
+- toggle mouse scale type using F7
+- fixed level music not being played correctly when level was loaded
+- quick load using F9, quick save using F5 on save consoles
+- fixed gamma setting not being saved
+- added cheats via chat console: bullettime, god, giveall, flypower, sneakypower, fastpower, healthpower
+- enabled some high resolution images from the 1997 Mac OS release
+- toggle window input grab using F6
+- turned off that image that would randomly flicker in the bottom-left corner
+- fixed health power object image
+- turned on, what seems to be, the original big font and aligned GUI objects for it
+- set the small font to always be used for save game thumbnails
+- fixed mouse image when choosing initial gamma
+
+ABUSE-TOOL:
+- extracting PCX images in SPEC files to modern image formats using OpenCV
+	- extracting as individual files
+	- extracting as tilemaps
+	- extracting animations as individual files
+	- extracting as a texture atlas using texture packing algorithm
+	- handling transparency in different types of images
+	- padding between images
+	- outline around groups in a texture atlas
+	- external color palettes(tints)
+	- tilemap palettes for tile positions
+	- extraction settings and list of files via "../abuse-tool/extract.txt"
+	- printing to console trough a log, log file saved at "../abuse-tool/log.txt"
+	- list of output texture files, image positions, sizes... saved at "../abuse-tool/texture_info.txt"
+	- created a list of all available SPEC files containing images and added settings for individual SPEC files
+
 # News for Abuse-XV 0.9 (unreleased)
 
 - Xenoveritas's fork of the SDL version

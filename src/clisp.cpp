@@ -43,6 +43,11 @@
 #include "jdir.h"
 #include "netcfg.h"
 
+//AR
+#include "sdlport/setup.h"
+extern Settings settings;
+//
+
 #define ENGINE_MAJOR 1
 #define ENGINE_MINOR 20
 
@@ -1014,7 +1019,7 @@ void *l_caller(long number, void *args)
     } break;
     case 64 :
     {
-      char name[256],name2[256];
+      char name[512],name2[512];
       strcpy(name,lstring_value(CAR(args)->Eval()));  args=CDR(args);
       long first=lnumber_value(CAR(args)->Eval());  args=CDR(args);
       long last=lnumber_value(CAR(args)->Eval());
@@ -1149,7 +1154,12 @@ long c_caller(long number, void *args)
       current_level->attacker(current_object)->picture_space(x1,y1,x2,y2);
       current_object->picture_space(xp1,yp1,xp2,yp2);
       if (xp1>x2 || xp2<x1 || yp1>y2 || yp2<y1) return 0;
-      else return 1;
+      else
+	  {
+		  //AR enable quick save if player(56) is touching the save console(61)
+		  if(current_level->attacker(current_object)->otype==56 && current_object->otype==61) settings.player_touching_console = true;
+		  return 1;
+	  }
     } break;
     case 23 : current_object->add_power(lnumber_value(CAR(args))); break;
     case 24 : current_object->add_hp(lnumber_value(CAR(args))); break;
@@ -1600,6 +1610,7 @@ long c_caller(long number, void *args)
     } break;
     case 174 :
     {
+		//AR get use/down key state
       view *v=current_object->controller();
       if (!v) { ((LObject *)args)->Print(); printf("get_player_inputs : object has no view!\n"); }
       else return v->y_suggestion;
@@ -1884,6 +1895,10 @@ long c_caller(long number, void *args)
     {
       char *fn=lstring_value(CAR(args));
       current_level->save(fn,1);
+	  
+	  //AR
+	  settings.quick_load = get_save_filename_prefix();
+	  settings.quick_load += fn;
     } break;
     case 224 :
     {
@@ -1902,6 +1917,8 @@ long c_caller(long number, void *args)
         strcpy( fn, lstring_value(CAR(args)) );
       }
       the_game->request_level_load(fn);
+
+	  settings.quick_load = fn;//AR
     } break;
     case 226 :
     {

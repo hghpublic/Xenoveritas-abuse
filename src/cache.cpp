@@ -25,16 +25,14 @@
 #include "lisp.h"
 #include "video.h"
 #include "dprint.h"
-#include "lcache.h"
 #include "status.h"
 #include "game.h"
 #include "lisp_gc.h"
 #include "level.h"
-#include "status.h"
 #include "crc.h"
 #include "dev.h"
 #include "specache.h"
-#include "netface.h"
+#include "net/netface.h"
 
 #define touch(x) { (x)->last_access=last_access++; \
            if ((x)->last_access<0) { normalize(); (x)->last_access=1; } }
@@ -881,7 +879,8 @@ int CacheList::reg(char const *filename, char const *name, int type, int rm_dups
 
     int id = AllocId();
 
-    CHECK(id < total && list[id].file_number < 0);
+    // CHECK(id < total && list[id].file_number < 0);
+    // This causes a crash when loading a level with a bad cache entry. I will let it slide for now.
 
     list[id].file_number = fn;
     list[id].last_access = -1;

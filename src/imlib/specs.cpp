@@ -12,9 +12,10 @@
 #   include "config.h"
 #endif
 
+#include "file_utils.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <math.h>
@@ -72,72 +73,11 @@ char const *spec_types[] =
 int total_files_open=0;
 char spec_main_file[100];
 
-static char *spec_prefix=NULL;
-static char *save_spec_prefix=NULL;
 
 static jFILE spec_main_jfile((FILE*)0);
 static int spec_main_fd = -1;
 static long spec_main_offset = -1;
 static spec_directory spec_main_sd;
-
-void set_filename_prefix(char const *prefix)
-{
-    if( spec_prefix )
-    {
-        free( spec_prefix );
-    }
-
-    if( prefix )
-    {
-        spec_prefix = strcpy( (char *)malloc( strlen( prefix ) + 2 ), prefix );
-        int len = strlen( prefix );
-        if( prefix[len - 1] != '\\' && prefix[len - 1] != '/')
-        {
-            spec_prefix[len] = PATH_SEPARATOR_CHAR;
-            spec_prefix[len + 1] = 0;
-        }
-    }
-    else
-    {
-        spec_prefix = NULL;
-    }
-}
-
-char *get_filename_prefix()
-{
-    return spec_prefix;
-}
-
-
-void set_save_filename_prefix(char const *save_prefix)
-{
-    if( save_spec_prefix )
-    {
-        free( save_spec_prefix );
-    }
-
-    if( save_prefix )
-    {
-        int len = strlen( save_prefix );
-        save_spec_prefix = (char *)malloc( len + 1 );
-        strcpy( save_spec_prefix, save_prefix );
-/* AK - Commented this out as it may cause problems
-        if( save_prefix[len - 1] != '\\' && save_prefix[len - 1] != '/' )
-        {
-            save_spec_prefix[len] = '/';
-            save_spec_prefix[len + 1] = '\0';
-        } */
-    }
-    else
-    {
-        save_spec_prefix = NULL;
-    }
-}
-
-char *get_save_filename_prefix()
-{
-  return save_spec_prefix;
-}
 
 int search_order=SPEC_SEARCH_OUTSIDE_INSIDE;
 
@@ -296,21 +236,7 @@ jFILE::jFILE(FILE *file_pointer)                       // assumes fp is at begin
 
 void jFILE::open_external(char const *filename, char const *mode, int flags)
 {
-  int skip_size=0;
-  char tmp_name[200];
-#ifdef WIN32
-  // Need to make sure it's not an absolute Windows path
-  if (spec_prefix && filename[0] != '/' && (filename[0] != '\0' && filename[1] != ':'))
-#else
-  if (spec_prefix && filename[0] != '/')
-#endif
-  {
-    sprintf(tmp_name,"%s%s",spec_prefix,filename);
-  }
-  else
-  {
-    strcpy(tmp_name,filename);
-  }
+  int skip_size=0; 
 
 //  int old_mask=umask(S_IRWXU | S_IRWXG | S_IRWXO);
   if (flags&O_WRONLY)
@@ -325,15 +251,15 @@ void jFILE::open_external(char const *filename, char const *mode, int flags)
     flags|=O_CREAT|O_RDWR;
 #ifdef WIN32
     //printf("Open %s flags %x\n", tmp_name, flags);
-    fd=open(tmp_name,flags,_S_IREAD | _S_IWRITE);
+    fd = prefix_open(filename, flags, _S_IREAD | _S_IWRITE);
 #else
-    fd=open(tmp_name,flags,S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    fd = prefix_open(filename, flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 #endif
   }
   else
   {
     //printf("Open %s flags %x\n", tmp_name, flags);
-    fd = open(tmp_name, flags);
+    fd = prefix_open(filename, flags);
   }
 
 //  umask(old_mask);
@@ -597,12 +523,20 @@ double bFILE::read_double()
 
 spec_directory::~spec_directory()
 {
-
-  if (total)
+  if (entries)
   {
-    free(data);
+    // Delete all entries before freeing the array
+    for (int i = 0; i < total; i++)
+    {
+      if (entries[i])
+        delete entries[i];
+    }
+    
     free(entries);
+    entries = nullptr;
   }
+  total = 0;
+  size = 0;
 }
 
 void spec_directory::FullyLoad(bFILE *fp)
@@ -723,61 +657,59 @@ void spec_directory::print()
     (*se)->Print();
 }
 
-
 void spec_directory::startup(bFILE *fp)
 {
   char buf[256];
-  memset(buf,0,256);
-  fp->read(buf,8);
-  buf[9]=0;
-  size=0;
-  if (!strcmp(buf,SPEC_SIGNATURE))
+  memset(buf, 0, 256);
+  fp->read(buf, 8);
+  buf[9] = 0;
+  size = 0;
+
+  if (!strcmp(buf, SPEC_SIGNATURE))
   {
-    total=fp->read_uint16();
-    entries=(spec_entry **)malloc(sizeof(spec_entry *)*total);
-    long start=fp->tell();
+    total = fp->read_uint16();
+    entries = (spec_entry **)malloc(sizeof(spec_entry *) * total);
+    long start = fp->tell();
 
-    int i;
-    for (i=0; i<total; i++)
+    // First pass - get sizes
+    for (int i = 0; i < total; i++)
     {
-      fp->read(buf,2);
-      long entry_size=sizeof(spec_entry)+(unsigned char)buf[1];
-      entry_size=(entry_size+3)&(~3);
-      fp->read(buf,(unsigned char)buf[1]);
-      fp->read(buf,9);
-
-      size+=entry_size;
+      fp->read(buf, 2);
+      int name_len = (unsigned char)buf[1];
+      fp->read(buf, name_len); // Read name
+      fp->read(buf, 9);        // Read flags and size info
     }
-    data=malloc(size);
-    char *dp=(char *)data;
-    fp->seek(start,SEEK_SET);
-    for (i=0; i<total; i++)
+
+    // Second pass - create entries
+    fp->seek(start, SEEK_SET);
+    for (int i = 0; i < total; i++)
     {
-      spec_entry *se=(spec_entry *)dp;
-      entries[i]=se;
+      unsigned char type, len, flags;
+      fp->read(&type, 1);
+      fp->read(&len, 1);
 
-      unsigned char len,flags,type;
-      fp->read(&type,1);
-      fp->read(&len,1);
-      se->type=type;
-      se->data = NULL;
-      se->name=dp+sizeof(spec_entry);
-      fp->read(se->name,len);
-      fp->read(&flags,1);
+      // Read the name
+      char *name = (char *)malloc(len + 1);
+      fp->read(name, len);
+      name[len] = 0;
 
-      se->size=fp->read_uint32();
-      se->offset=fp->read_uint32();
-      dp+=((sizeof(spec_entry)+len)+3)&(~3);
+      fp->read(&flags, 1);
+      uint32_t entry_size = fp->read_uint32();
+      uint32_t entry_offset = fp->read_uint32();
+
+      // Create entry on heap
+      entries[i] = new spec_entry(type, name, NULL, entry_size, entry_offset);
+
+      free(name);
     }
   }
   else
   {
-    total=0;
-    data=NULL;
-    entries=NULL;
+    total = 0;
+    data = NULL;
+    entries = NULL;
   }
 }
-
 
 spec_directory::spec_directory(bFILE *fp)
 { startup(fp); }

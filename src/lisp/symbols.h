@@ -14,7 +14,7 @@ struct func
 
 /* select, digistr, load-file are not common lisp functions! */
 
-struct func sys_funcs[] =
+inline struct func sys_funcs[] =
 {
     { "print", 1, -1 }, /* 0 */
     { "car", 1, 1 }, /* 1 */

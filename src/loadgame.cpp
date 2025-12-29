@@ -2,6 +2,7 @@
  *  Abuse - dark 2D side-scrolling platform game
  *  Copyright (c) 1995 Crack dot Com
  *  Copyright (c) 2005-2011 Sam Hocevar <sam@hocevar.net>
+ *  Copyright (c) 2016 Antonio Radojkovic <antonior.software@gmail.com>
  *
  *  This software was released into the Public Domain. As with most public
  *  domain software, no warranty is made or implied by Crack dot Com, by
@@ -17,6 +18,7 @@
 #include "common.h"
 
 #include "game.h"
+#include "specache.h"
 
 #include "specs.h"
 #include "jwindow.h"
@@ -31,6 +33,12 @@
 #include "id.h"
 #include "demo.h"
 
+//AR
+#include "sdlport/setup.h"
+extern Settings settings;
+extern int get_key_binding( char const *dir, int i );
+//
+
 extern void *save_order;         // load from "saveordr.lsp", contains a list ordering the save games
 
 extern JCFont *console_font;
@@ -41,22 +49,28 @@ int last_save_game_number=0;
 
 int save_buts[MAX_SAVE_GAMES * 3];
 
-
 void load_number_icons()
 {
-    for (int i = 0; i < MAX_SAVE_GAMES * 3; i++)
-    {
-        char name[100];
-        sprintf(name, "nums%04d.pcx", i + 1);
-        save_buts[i] = cache.reg("art/icons.spe", name, SPEC_IMAGE, 1);
-    }
-}
+  for (int i = 0; i < MAX_SAVE_GAMES * 3; i++)
+  {
+    char name[100];
+    sprintf(name, "nums%04d.pcx", i + 1);
 
+    spec_directory *sd = sd_cache.get_spec_directory("art/icons.spe");
+    if (!sd || !sd->find(name))
+    {
+      printf("File not found in cache: %s. Stopping further loading.\n", name);
+      break; //
+    }
+
+    save_buts[i] = cache.reg("art/icons.spe", name, SPEC_IMAGE, 1);
+  }
+}
 
 void last_savegame_name(char *buf)
 {
     printf( "last_savegame_name()\n" );
-    sprintf(buf,"%ssave%04d.spe",get_save_filename_prefix(), (last_save_game_number+MAX_SAVE_GAMES-1)%MAX_SAVE_GAMES+1);
+    sprintf(buf,"save%04d.spe", (last_save_game_number+MAX_SAVE_GAMES-1)%MAX_SAVE_GAMES+1);
 }
 
 Jwindow *create_num_window(int mx, int total_saved, int lines, image **thumbnails)
@@ -86,7 +100,9 @@ Jwindow *create_num_window(int mx, int total_saved, int lines, image **thumbnail
   for (i=0; i<total_saved-1; i++)
     buts[i]->next=buts[i+1];
 
-  return wm->CreateWindow(ivec2(mx, yres / 2 - (Jwindow::top_border() + maxih * 5) / 2), ivec2(-1), buts[0]);
+  Jwindow *l_win = wm->CreateWindow(ivec2(mx, yres / 2 - (Jwindow::top_border() + maxih * 5) / 2), ivec2(-1), buts[0]);
+  
+  return l_win;
 }
 
 int get_save_spot()
@@ -95,8 +111,8 @@ int get_save_spot()
   for (; i>0; )
   {
     char name[20];
-    sprintf(name,"%ssave%04d.spe", get_save_filename_prefix(),i);
-    FILE *fp=open_FILE(name,"rb");
+    sprintf(name,"save%04d.spe",i);
+    FILE *fp = prefix_fopen(name, "rb");
     if (fp)
       i=0;
     else { last_free=i; i--; }
@@ -134,7 +150,7 @@ int get_save_spot()
 void get_savegame_name(char *buf)  // buf should be at least 50 bytes
 {
     sprintf(buf,"save%04d.spe",(last_save_game_number++)%MAX_SAVE_GAMES+1);
-/*  FILE *fp=open_FILE("lastsave.lsp","wb");
+/*  FILE *fp=prefix_fopen("lastsave.lsp","wb");
   if (fp)
   {
     fprintf(fp,"(setq last_save_game %d)\n",last_save_game_number%MAX_SAVE_GAMES);
@@ -148,7 +164,7 @@ int show_load_icon()
     for( i = 0; i < MAX_SAVE_GAMES; i++ )
     {
         char nm[255];
-        sprintf( nm, "%ssave%04d.spe", get_save_filename_prefix(), i + 1 );
+        sprintf( nm, "save%04d.spe", i + 1 );
         bFILE *fp = open_file( nm, "rb" );
         if( fp->open_failure() )
         {
@@ -165,6 +181,10 @@ int show_load_icon()
 
 int load_game(int show_all, char const *title)   // return 0 if the player escapes, else return the number of the game to load
 {
+	//AR this creates the small load/save game window
+	//and takes complete control of the program until it leaves the loop
+	//it is called via clisp.cpp (case 263)
+
     int total_saved=0;
     image *thumbnails[MAX_SAVE_GAMES];
     int start_num=0;
@@ -178,7 +198,7 @@ int load_game(int show_all, char const *title)   // return 0 if the player escap
         char name[255];
         int fail=0;
 
-        sprintf(name,"%ssave%04d.spe", get_save_filename_prefix(), start_num+1);
+        sprintf(name,"save%04d.spe", start_num+1);
         bFILE *fp=open_file(name,"rb");
         if (fp->open_failure())
         {
@@ -232,10 +252,31 @@ int load_game(int show_all, char const *title)   // return 0 if the player escap
 */
 
     // Create thumbnail window 5 pixels to the right of the list window
-    Jwindow *l_win=create_num_window(0,total_saved,MAX_SAVE_LINES,thumbnails);
-    Jwindow *preview=wm->CreateWindow(l_win->m_pos + ivec2(l_win->m_size.x + 5, 0), ivec2(max_w, max_h), NULL, title);
+    Jwindow *l_win = create_num_window(0,total_saved,MAX_SAVE_LINES,thumbnails);
+    Jwindow *preview = wm->CreateWindow(l_win->m_pos + ivec2(l_win->m_size.x + 5, 0), ivec2(max_w, max_h), NULL, title);
 
     preview->m_surf->PutImage(first, ivec2(preview->x1(), preview->y1()));
+
+	//AR let me know we are stuck here
+	the_game->ar_stateold = the_game->ar_state;
+	the_game->ar_state = AR_LOADSAVE;
+
+	//AR controller ui movement, number icon size 30x25
+	static int button_w = 30;
+	static int button_h = 25;
+	int mx, my;//mouse position
+
+	int old_mx = wm->GetMousePos().x;
+	int old_my = wm->GetMousePos().y;
+
+	//AR initial position of the mouse in the window for controller use
+	if(settings.ctr_aim)
+	{
+		mx = l_win->m_pos.x + button_w/2;
+		my = l_win->m_pos.y + button_h/2;
+		wm->SetMousePos(ivec2(mx,my));
+	}
+	//
 
     Event ev;
     int got_level=0;
@@ -254,9 +295,40 @@ int load_game(int show_all, char const *title)   // return 0 if the player escap
             preview->m_surf->PutImage(thumbnails[draw_num], ivec2(preview->x1(), preview->y1()));
         }
 
-        if ((ev.type==EV_CLOSE_WINDOW) || (ev.type==EV_KEY && ev.key==JK_ESC))
-            quit=1;
+        if ((ev.type==EV_CLOSE_WINDOW) || (ev.type==EV_KEY && ev.key==JK_ESC)) quit=1;
+
+		//AR move cursor over icons
+		if(settings.ctr_aim && ev.type==EV_KEY)
+		{
+			if((ev.key==get_key_binding("left",0) || ev.key==get_key_binding("left2",0)))
+			{
+				if(mx-button_w>l_win->m_pos.x) mx -= button_w;
+				wm->SetMousePos(ivec2(mx,my));
+			}
+			if((ev.key==get_key_binding("right",0) || ev.key==get_key_binding("right2",0)))
+			{
+				if(mx+button_w<l_win->m_pos.x+l_win->m_size.x) mx += button_w;
+				wm->SetMousePos(ivec2(mx,my));
+			}
+			if((ev.key==get_key_binding("up",0) || ev.key==get_key_binding("up2",0)))
+			{
+				if(my-button_h>l_win->m_pos.y) my -= button_h;
+				wm->SetMousePos(ivec2(mx,my));
+			}
+			if((ev.key==get_key_binding("down",0) || ev.key==get_key_binding("down2",0)))
+			{
+				if(my+button_h<l_win->m_pos.y+l_win->m_size.y) my += button_h;
+				wm->SetMousePos(ivec2(mx,my));
+			}
+		}
+		//
+
     } while (!got_level && !quit);
+
+	//AR let me know we leaving
+	the_game->ar_state = the_game->ar_stateold;
+	if(settings.ctr_aim) wm->SetMousePos(ivec2(old_mx,old_my));//put mouse where it was on entering
+	//
 
     wm->close_window(l_win);
     wm->close_window(preview);

@@ -90,45 +90,54 @@ gui_status_manager::gui_status_manager()
 
 void gui_status_manager::update(int percentage)
 {
-  last_perc=percentage;
+  last_perc = percentage;
   if (first)
   {
     if (!first->stat_win)
     {
       time_marker now;
-      if (now.diff_time(&first->last_time)>1)
+      if (now.diff_time(&first->last_time) > 1)
       {
-    long wx=xres/2,wy=10,len1=strlen(first->name)*wm->font()->Size().x+10,len2=0,len3,
-      h1=wm->font()->Size().y+5,h2=first->show ? first->show->height() : 0;
+        long wx = xres / 2, wy = 10, len1 = strlen(first->name) * wm->font()->Size().x + 10, len2 = 0, len3,
+             h1 = wm->font()->Size().y + 5, h2 = first->show ? first->show->height() : 0;
 
-    if (first->show) len2=first->show->width()/2;
-    if (len2>len1) len3=len2; else len3=len1;
-    wx-=len3/2;
+        if (first->show)
+          len2 = first->show->width() / 2;
+        if (len2 > len1)
+          len3 = len2;
+        else
+          len3 = len1;
+        wx -= len3 / 2;
 
+        gui_status_node *p = first->next;
+        while (p && !p->stat_win)
+          p = p->next;
+        if (p)
+          wy = p->stat_win->m_pos.y + p->stat_win->y2() + 5;
 
-    gui_status_node *p=first->next;
-    while (p && !p->stat_win) p=p->next;
-    if (p) wy=p->stat_win->m_pos.y+p->stat_win->y2()+5;
+        // Create window first
+        first->stat_win = wm->CreateWindow(ivec2(wx, wy), ivec2(len3, h1 * 2 + h2), NULL, "status");
 
-    int mx = first->stat_win->x1() + 1;
-    int my = first->stat_win->y1() + wm->font()->Size().y / 2;
-    first->stat_win=wm->CreateWindow(ivec2(wx, wy), ivec2(len3, h1*2+h2), NULL, "status");
-    wm->font()->PutString(first->stat_win->m_surf, ivec2(mx, my), first->name, wm->black());
-    wm->font()->PutString(first->stat_win->m_surf, ivec2(mx, my), first->name, wm->bright_color());
-    if (first->show)
-      first->show->draw(first->stat_win->m_surf, (first->stat_win->x2()-first->stat_win->x1())/2-
-                first->show->width()/2, my+h1, NULL);
+        // Now calculate mx and my using the newly created window
+        int mx = first->stat_win->x1() + 1;
+        int my = first->stat_win->y1() + wm->font()->Size().y / 2;
 
-    draw_bar(first,percentage);
-    wm->flush_screen();
+        wm->font()->PutString(first->stat_win->m_surf, ivec2(mx, my), first->name, wm->black());
+        wm->font()->PutString(first->stat_win->m_surf, ivec2(mx, my), first->name, wm->bright_color());
+        if (first->show)
+          first->show->draw(first->stat_win->m_surf, (first->stat_win->x2() - first->stat_win->x1()) / 2 - first->show->width() / 2, my + h1, NULL);
+
+        draw_bar(first, percentage);
+        wm->flush_screen();
       }
-    } else
+    }
+    else
     {
-      if (percentage>first->last_update)
+      if (percentage > first->last_update)
       {
-    first->last_update=percentage;
-    draw_bar(first,percentage);
-    wm->flush_screen();
+        first->last_update = percentage;
+        draw_bar(first, percentage);
+        wm->flush_screen();
       }
     }
   }

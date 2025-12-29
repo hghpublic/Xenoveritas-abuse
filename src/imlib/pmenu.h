@@ -50,7 +50,7 @@ public :
   pmenu_item *find_id(int search_id);
   pmenu_item *find_key(int key);
   psub_menu(pmenu_item *First, psub_menu *Next)
-  { first=First; Next=Next; win=0; active=0; }
+  { first=First; next=Next; win=0; active=0; }
   int handle_event(Jwindow *parent, int x, int y, Event &ev);
   void draw(Jwindow *parent, int x, int y);
   void hide(Jwindow *parent, int x, int y);

@@ -26,6 +26,16 @@
 #include "view.h"
 #include "id.h"
 
+//AR - game states
+enum AR_Stuff
+{
+	AR_INTRO,
+	AR_MAINMENU,
+	AR_PLAY,
+	AR_LOADSAVE,
+	AR_QUIT
+};
+
 #define MAPFW                100
 #define MAPFH                100
 #define MAPBW                100
@@ -58,8 +68,6 @@ extern int32_t current_vxadd,current_vyadd;
 extern int frame_panic,massive_frame_panic;
 extern int demo_start,idle_ticks;
 
-extern FILE *open_FILE(char const *filename, char const *mode);
-
 class Game
 {
 public:
@@ -76,21 +84,30 @@ private:
   int32_t last_time,fps;
   char mapname[100],command[200],help_text[200];
   int refresh,mousex,mousey,help_text_frames;
-  int has_joystick,no_delay;
+  int has_joystick;
 
 
   Jwindow *top_menu,*joy_win,*last_input;
-  JCFont *game_font;
+  JCFont *game_font;  
   uint8_t keymap[512/8];
 
 public :
+	JCFont *save_game_font;	//AR
+	JCFont *ar_small_font;	//AR
+	JCFont *ar_big_font;	//AR
+  int no_delay;
+
   int key_down(int key) { return keymap[key/8]&(1<<(key%8)); }
+  //AR x=1 -> key pressed, x=0 key released
   void set_key_down(int key, int x) { if (x) keymap[key/8]|=(1<<(key%8)); else keymap[key/8]&=~(1<<(key%8)); }
   void reset_keymap() { memset(keymap,0,sizeof(keymap)); }
 
   int nplayers;
   view *first_view,*old_view;
   int state,zoom;
+
+  //AR - game state, so I don't have to rely on the original mess with individual update loops
+  int ar_state, ar_stateold;
 
   void step();
   void show_help(char const *st);
@@ -150,6 +167,7 @@ public :
   void grow_views(int amount);
   void play_sound(int id, int vol, int32_t x, int32_t y);
   void request_level_load(char *name);
+  void request_level_load(std::string name);//AR
   void request_end();
 };
 
