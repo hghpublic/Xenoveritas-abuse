@@ -6,6 +6,15 @@ ifndef::env-github[:icons: font]
 :important-caption: :exclamation:
 :warning-caption: :warning:
 
+[IMPORTANT]
+====
+The commit history of this branch is volatile. +
+Rebasing and force pushing happens at will. +
+The commits in this branch mostly collect changes with a narrow scope. +
+They rarely document code evolution. +
+The history may be rewritten without notice.
+====
+
 == Abuse
 
 https://en.wikipedia.org/wiki/Abuse_(video_game)
